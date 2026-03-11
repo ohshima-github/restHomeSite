@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>賃貸物件比較レポート</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --orange: #d97706;
+      --orange-light: #fef3c7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+      padding: 28px 16px 24px;
+      text-align: center;
+    }
+    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.3px; }
+    .header p { font-size: 13px; opacity: 0.8; }
+
+    /* ── Layout wrapper ── */
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 12px; }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 16px 12px;
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+    @media (min-width: 640px) { .summary-bar { grid-template-columns: repeat(4, 1fr); } }
+    .summary-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      border-top: 3px solid var(--primary);
+    }
+    .summary-card .s-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .summary-card .s-value { font-size: 20px; font-weight: 800; color: var(--primary); }
+    .summary-card .s-name { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Sort controls ── */
+    .controls {
+      padding: 4px 12px 14px;
+      max-width: 1160px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .controls-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .sort-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: white;
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .sort-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .sort-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* ── Cards grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 0 12px 24px;
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+    @media (min-width: 580px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    /* ── Property card ── */
+    .prop-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .prop-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.12); transform: translateY(-1px); }
+
+    /* rank badge */
+    .rank-badge {
+      position: absolute; top: 12px; right: 12px;
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800;
+    }
+    .rank-1 { background: #fbbf24; color: #78350f; }
+    .rank-2 { background: #9ca3af; color: #1f2937; }
+    .rank-3 { background: #b45309; color: white; }
+    .rank-other { background: #f1f5f9; color: var(--muted); }
+
+    /* type badge */
+    .type-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; padding: 3px 9px; border-radius: 4px;
+      font-weight: 600; margin-bottom: 3px;
+    }
+    .type-mansion { background: var(--primary-light); color: var(--primary); }
+    .type-apart   { background: var(--green-light);   color: var(--green); }
+
+    /* no-key badge */
+    .nokey-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; padding: 3px 9px; border-radius: 4px;
+      font-weight: 600; background: #fce7f3; color: #9d174d;
+      margin-left: 4px;
+    }
+
+    .card-name { font-size: 17px; font-weight: 800; line-height: 1.3; padding-right: 36px; }
+    .card-addr { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* monthly */
+    .monthly-total {
+      display: flex; align-items: baseline; gap: 4px;
+      border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    }
+    .monthly-yen { font-size: 28px; font-weight: 900; color: var(--primary); letter-spacing: -1px; }
+    .monthly-unit { font-size: 13px; color: var(--muted); }
+    .monthly-break { font-size: 11px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+
+    /* station */
+    .station-row {
+      display: flex; align-items: center; gap: 8px;
+      background: #f8fafc; border-radius: 8px; padding: 8px 10px;
+    }
+    .station-icon { font-size: 18px; }
+    .station-info { flex: 1; min-width: 0; }
+    .station-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .station-line { font-size: 11px; color: var(--muted); }
+    .walk-badge {
+      font-size: 12px; font-weight: 800; padding: 5px 9px;
+      border-radius: 8px; white-space: nowrap;
+    }
+    .walk-great { background: var(--green-light); color: var(--green); }
+    .walk-good  { background: var(--orange-light); color: var(--orange); }
+    .walk-far   { background: var(--red-light);    color: var(--red); }
+
+    /* info grid */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .info-item .i-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .info-item .i-value { font-size: 15px; font-weight: 700; }
+    .age-new    { color: var(--green); }
+    .age-mid    { color: var(--orange); }
+    .age-old    { color: var(--red); }
+
+    /* score */
+    .score-section { display: flex; flex-direction: column; gap: 4px; }
+    .score-row { display: flex; align-items: center; gap: 8px; }
+    .score-lbl { font-size: 10px; color: var(--muted); width: 64px; flex-shrink: 0; }
+    .score-bar-bg { flex: 1; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 3px; background: var(--primary); transition: width .4s; }
+    .score-num { font-size: 11px; font-weight: 600; width: 28px; text-align: right; color: var(--muted); }
+
+    /* composite score */
+    .composite-score {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; background: #f8fafc; border-radius: 8px;
+    }
+    .cs-label { font-size: 11px; color: var(--muted); }
+    .cs-stars { font-size: 16px; letter-spacing: 1px; }
+    .cs-num { font-size: 13px; font-weight: 800; margin-left: auto; }
+
+    /* initial cost */
+    .initial-cost {
+      font-size: 12px; color: var(--muted);
+      background: #f8fafc; border-radius: 8px; padding: 8px 10px;
+    }
+    .ic-amount { font-weight: 700; color: var(--text); }
+
+    /* CTA */
+    .suumo-btn {
+      display: block; width: 100%; padding: 11px;
+      background: #e84d0e; color: white; text-align: center;
+      border-radius: 8px; font-size: 13px; font-weight: 700;
+      transition: opacity .2s; margin-top: auto;
+    }
+    .suumo-btn:hover { opacity: 0.88; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 18px; font-weight: 800; margin-bottom: 14px;
+      padding-bottom: 8px; border-bottom: 3px solid var(--primary);
+    }
+
+    /* ── Table section ── */
+    .table-section { padding: 0 12px 40px; max-width: 1160px; margin: 0 auto; }
+    .table-wrap {
+      overflow-x: auto; border-radius: var(--radius);
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; background: white; min-width: 900px; }
+    thead th {
+      background: #1e3a8a; color: white; padding: 11px 13px;
+      text-align: left; font-size: 12px; font-weight: 600;
+      white-space: nowrap; position: sticky; top: 0; z-index: 1;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: var(--primary-light); }
+    td { padding: 10px 13px; font-size: 13px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td.td-name { font-weight: 700; white-space: normal; min-width: 140px; }
+    td.td-price { font-weight: 800; color: var(--primary); }
+    td.td-link a {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #e84d0e; color: white; padding: 4px 10px;
+      border-radius: 6px; font-size: 11px; font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* cell color classes */
+    .c-green  { background: var(--green-light);  color: var(--green);  font-weight: 700; }
+    .c-orange { background: var(--orange-light); color: var(--orange); font-weight: 700; }
+    .c-red    { background: var(--red-light);    color: var(--red);    font-weight: 700; }
+
+    /* hazard score badge */
+    .hazard-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 15px; font-weight: 800; padding: 3px 10px;
+      border-radius: 4px; white-space: nowrap;
+    }
+    .hazard-high { background: var(--green-light);  color: var(--green); }
+    .hazard-mid  { background: var(--orange-light); color: var(--orange); }
+    .hazard-low  { background: var(--red-light);    color: var(--red); }
+
+    /* ── Footer ── */
+    footer {
+      padding: 20px 16px; text-align: center;
+      font-size: 12px; color: var(--muted);
+      border-top: 1px solid var(--border); background: white;
+    }
+    .notice {
+      display: inline-block; text-align: left;
+      background: var(--orange-light); border-left: 3px solid var(--orange);
+      padding: 10px 14px; border-radius: 6px; margin-bottom: 10px;
+      font-size: 12px; max-width: 800px; width: 100%;
+    }
+    footer p { margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <h1>🏠 賃貸物件比較レポート</h1>
+  <p>作成日：2026年3月1日 ／ 更新日：2026年3月8日 ｜ 比較物件数：23件（全24件中 1件掲載終了）</p>
+</header>
+
+<div id="summary-bar" class="summary-bar"></div>
+
+<div class="wrap">
+  <div class="controls">
+    <span class="controls-label">並び替え：</span>
+    <button class="sort-btn active" onclick="sortBy('score')">おすすめ順</button>
+    <button class="sort-btn" onclick="sortBy('rent')">家賃が安い順</button>
+    <button class="sort-btn" onclick="sortBy('walk')">駅近い順</button>
+    <button class="sort-btn" onclick="sortBy('area')">広い順</button>
+    <button class="sort-btn" onclick="sortBy('age')">築浅順</button>
+    <button class="sort-btn" onclick="sortBy('initial')">初期費用安い順</button>
+  </div>
+</div>
+
+<div id="cards-grid" class="cards-grid"></div>
+
+<div class="table-section wrap">
+  <h2 class="section-title">一覧比較表</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>順位</th>
+          <th>物件名</th>
+          <th>月額合計</th>
+          <th>家賃</th>
+          <th>管理費</th>
+          <th>敷金</th>
+          <th>礼金</th>
+          <th>初期費用目安</th>
+          <th>面積(㎡)</th>
+          <th>最寄り駅</th>
+          <th>路線</th>
+          <th>徒歩</th>
+          <th>竣工年</th>
+          <th>築年数</th>
+          <th>種別</th>
+          <th>構造</th>
+          <th>ハザード</th>
+          <th>SUUMO</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="notice">
+      ⚠️ <strong>掲載終了物件あり：</strong>
+      https://suumo.jp/chintai/jnc_000105013170/?bc=100491098467 はアクセス時に404エラーが発生しました（掲載終了の可能性があります）。
+    </div>
+    <p>※ 初期費用目安＝敷金＋礼金の合計（仲介手数料・前家賃・火災保険料等は含みません）</p>
+    <p>※ おすすめスコアは「家賃30%・駅近30%・広さ15%・築浅15%・構造10%」で算出した参考値です（構造スコア: 気泡コン=100, RC=80, 鉄骨=60, 軽量鉄骨=50, 木造=40）</p>
+    <p>※ ハザードスコア7未満の物件は安全要件を満たさないため評価対象外とし、強制的に最下位としています</p>
+    <p>※ 情報はSUUMO取得時点のものです。最新情報は必ずSUUMOにてご確認ください</p>
+    <p>※ 「ハザードスコア」はapi.utsuken.net APIを使用し、各物件の緯度経度（丁目レベル）をもとに洪水・土砂・津波等のリスクを10段階で算出した参考値です（10=最安全）。座標精度の限界から実際と異なる場合があります</p>
+  </div>
+</footer>
+
+<script>
+const RAW = [
+  { id:1,  name:"コンフォール目黒",        rent:144000, mgmt:8000,  deposit:144000, key:288000, layout:"1LDK", area:44.28, addr:"目黒区目黒本町５",  station:"武蔵小山駅", line:"東急目黒線",    walk:6,  yr:1993, floor:"2階/5階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.619278, lng:139.699509, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000104326440/?bc=100484781553" },
+  { id:2,  name:"アコルデ東中野",           rent:170000, mgmt:5000,  deposit:170000, key:170000, layout:"1LDK", area:45.5,  addr:"中野区東中野１",    station:"東中野駅",   line:"JR中央線",      walk:7,  yr:2014, floor:"3階/3階建",      type:"マンション", structure:"鉄骨造",             lat:35.703674, lng:139.684967, hazardScore:8,  url:"https://suumo.jp/chintai/jnc_000104615000/?bc=100488876724" },
+  { id:3,  name:"Land Palace武蔵小山",      rent:165000, mgmt:5500,  deposit:165000, key:0,      layout:"1LDK", area:40.55, addr:"目黒区目黒本町３",  station:"武蔵小山駅", line:"東急目黒線",    walk:6,  yr:2018, floor:"3階/3階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.622478, lng:139.701004, hazardScore:7,  url:"https://suumo.jp/chintai/jnc_000103346479/?bc=100490012559" },
+  { id:4,  name:"LASA戸越III",              rent:156000, mgmt:3000,  deposit:156000, key:156000, layout:"1LDK", area:51.44, addr:"品川区戸越１",      station:"戸越銀座駅", line:"東急池上線",    walk:7,  yr:2008, floor:"3階/3階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.616383, lng:139.719681, hazardScore:7,  url:"https://suumo.jp/chintai/jnc_000105185504/?bc=100492427987" },
+  { id:5,  name:"Maison TOKIWA",            rent:170000, mgmt:6000,  deposit:170000, key:170000, layout:"1LDK", area:45.68, addr:"品川区中延５",      station:"荏原町駅",   line:"東急大井町線",  walk:1,  yr:2024, floor:"3階/3階建",      type:"マンション", structure:"ALC造（気泡コン）",  lat:35.602512, lng:139.708130, hazardScore:6,  url:"https://suumo.jp/chintai/jnc_000105155087/?bc=100490975377" },
+  { id:6,  name:"モデストハイツ平塚",       rent:155000, mgmt:5000,  deposit:155000, key:310000, layout:"1LDK", area:49.16, addr:"品川区平塚１",      station:"戸越銀座駅", line:"東急池上線",    walk:2,  yr:2012, floor:"2階/3階建",      type:"マンション", structure:"鉄骨造",             lat:35.614887, lng:139.715485, hazardScore:8,  url:"https://suumo.jp/chintai/jnc_000105328801/?bc=100492471567" },
+  { id:7,  name:"S-Falcone",                rent:160000, mgmt:5000,  deposit:160000, key:160000, layout:"1LDK", area:44.75, addr:"品川区中延３",      station:"中延駅",     line:"東急大井町線",  walk:3,  yr:2018, floor:"2階/2階建",      type:"アパート",   structure:"木造",               lat:35.608006, lng:139.710846, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000105196679/?bc=100491361007" },
+  { id:8,  name:"武蔵小山アパート(築6年)",  rent:170000, mgmt:5000,  deposit:170000, key:170000, layout:"1LDK", area:45.5,  addr:"品川区小山５",      station:"武蔵小山駅", line:"東急目黒線",    walk:4,  yr:2020, floor:"2階/2階建",      type:"アパート",   structure:"木造",               lat:35.616356, lng:139.701447, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000105257806/?bc=100491941661" },
+  { id:9,  name:"Chouette武蔵小山",         rent:138000, mgmt:2000,  deposit:138000, key:138000, layout:"1LDK", area:38.29, addr:"品川区荏原５",      station:"西小山駅",   line:"東急目黒線",    walk:9,  yr:2014, floor:"2階/3階建",      type:"アパート",   structure:"木造",               lat:35.614521, lng:139.703049, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000105265310/?bc=100492004612" },
+  { id:10, name:"Bergamotto",               rent:146000, mgmt:4000,  deposit:146000, key:146000, layout:"1LDK", area:46.68, addr:"品川区小山５",      station:"西小山駅",   line:"東急目黒線",    walk:7,  yr:2010, floor:"2階/2階建",      type:"アパート",   structure:"軽量鉄骨造",         lat:35.616356, lng:139.701447, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000104717634/?bc=100487595307" },
+  { id:11, name:"エバラフラット",            rent:140000, mgmt:4000,  deposit:140000, key:280000, layout:"1LDK", area:37.62, addr:"品川区東中延１",    station:"荏原中延駅", line:"東急池上線",    walk:4,  yr:2016, floor:"2階/4階建",      type:"マンション", structure:"鉄骨造",             lat:35.611023, lng:139.713852, hazardScore:10, url:"https://suumo.jp/chintai/bc_100491557709/?trnsfr=01" },
+  { id:12, name:"グランドソレイユ中延",      rent:125000, mgmt:5000,  deposit:125000, key:125000, layout:"1LDK", area:33.06, addr:"品川区二葉４",      station:"西大井駅",   line:"JR横須賀線",    walk:8,  yr:2014, floor:"2階/5階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.602699, lng:139.715836, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000105210769/?bc=100491879514" },
+  { id:13, name:"荏原中延駅アパート(木造築6年)", rent:136000, mgmt:3000, deposit:0,    key:272000, layout:"1LDK", area:33.12, addr:"品川区東中延１",    station:"荏原中延駅", line:"東急池上線",    walk:3,  yr:2020, floor:"2階/2階建",      type:"アパート",   structure:"木造",               lat:35.611023, lng:139.713852, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000105048818/?bc=100491912975" },
+  { id:14, name:"ラ・キエイユ",             rent:135000, mgmt:5000,  deposit:135000, key:135000, layout:"1LDK", area:32.81, addr:"品川区戸越５",      station:"戸越公園駅", line:"東急大井町線",  walk:2,  yr:2018, floor:"4階/4階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.609840, lng:139.717438, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000104769453/?bc=100386000103" },
+  { id:15, name:"日神デュオステージ中野坂上NEXT", rent:129000, mgmt:15000, deposit:129000, key:129000, layout:"1LDK", area:30.09, addr:"中野区中央２", station:"中野坂上駅", line:"東京メトロ丸ノ内線", walk:3, yr:2008, floor:"9階/10階建",  type:"マンション", structure:"鉄筋コンクリート造", lat:35.699482, lng:139.679337, hazardScore:7,  url:"https://suumo.jp/chintai/jnc_000105496794/?bc=100493772462" },
+  { id:16, name:"中野新井２マンション(築3年)", rent:140000, mgmt:6000, deposit:140000, key:140000, layout:"2K",   area:32.62, addr:"中野区新井２",      station:"中野駅",     line:"JR中央線",      walk:9,  yr:2023, floor:"2階/3階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.712036, lng:139.662903, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000080896617/?bc=100492217221" },
+  { id:17, name:"エクセルコート中野",        rent:146000, mgmt:3000,  deposit:146000, key:146000, layout:"1LDK", area:39.39, addr:"中野区中野１",      station:"東中野駅",   line:"都営大江戸線",  walk:10, yr:2018, floor:"2階/3階建",      type:"アパート",   structure:"木造",               lat:35.703438, lng:139.675018, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000105562981/?bc=100494005156" },
+  { id:18, name:"Laguna Seca",              rent:142000, mgmt:8000,  deposit:142000, key:142000, layout:"1LDK", area:38.95, addr:"新宿区上落合３",    station:"落合駅",     line:"東京メトロ東西線", walk:5, yr:2026, floor:"2階/3階建",      type:"アパート",   structure:"木造",               lat:35.712521, lng:139.683716, hazardScore:10, url:"https://suumo.jp/chintai/jnc_000104214952/?bc=100483888215" },
+  { id:19, name:"ドミールCity東中野",       rent:143000, mgmt:9500,  deposit:143000, key:143000, layout:"2K",   area:39.66, addr:"中野区東中野４",    station:"東中野駅",   line:"JR総武線",      walk:6,  yr:2012, floor:"4階/8階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.708885, lng:139.685577, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000105081103/?bc=100490449208" },
+  { id:20, name:"中野５マンション(築17年)", rent:148000, mgmt:5000,  deposit:148000, key:148000, layout:"1LDK", area:36.82, addr:"中野区中野５",      station:"中野駅",     line:"JR総武線",      walk:5,  yr:2009, floor:"3階/3階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.707859, lng:139.668930, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000105350926/?bc=100492634282" },
+  { id:21, name:"オークレール上落合",       rent:148000, mgmt:6000,  deposit:148000, key:148000, layout:"1LDK", area:37.53, addr:"新宿区上落合２",    station:"落合駅",     line:"東京メトロ東西線", walk:4, yr:2024, floor:"2階/4階建",      type:"マンション", structure:"鉄骨造",             lat:35.713505, lng:139.688110, hazardScore:6,  url:"https://suumo.jp/chintai/jnc_000102887598/?bc=100479915352" },
+  { id:22, name:"グレイス戸越",             rent:151000, mgmt:4000,  deposit:151000, key:151000, layout:"1LDK", area:34.99, addr:"品川区戸越４",      station:"戸越公園駅", line:"東急大井町線",  walk:4,  yr:2018, floor:"3階/3階建",      type:"アパート",   structure:"木造",               lat:35.612019, lng:139.718384, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000104928378/?bc=100494354047" },
+  { id:23, name:"ALERO Kamiochiai",         rent:145000, mgmt:10000, deposit:0,      key:0,      layout:"1LDK", area:30.65, addr:"新宿区上落合１",    station:"落合駅",     line:"東京メトロ東西線", walk:4, yr:2019, floor:"4階/4階建",      type:"マンション", structure:"鉄筋コンクリート造", lat:35.713486, lng:139.692429, hazardScore:9,  url:"https://suumo.jp/chintai/jnc_000105308283/?bc=100493233869" },
+];
+
+// 派生フィールドを追加
+const CUR_YEAR = 2026;
+const properties = RAW.map(p => ({
+  ...p,
+  total:   p.rent + p.mgmt,
+  initial: p.deposit + p.key,
+  age:     CUR_YEAR - p.yr,
+}));
+
+// ── 構造スコア（固定値） ──
+function structureScore(s) {
+  if (/ALC|気泡コン/.test(s)) return 100;
+  if (/鉄筋コンクリート/.test(s)) return 80;
+  if (/軽量鉄骨/.test(s)) return 50;
+  if (/鉄骨/.test(s)) return 60;
+  if (/木造/.test(s)) return 40;
+  return 50;
+}
+
+// ── スコア計算 (0〜100) ──
+function computeScores(props) {
+  const totals = props.map(p => p.total);
+  const walks  = props.map(p => p.walk);
+  const areas  = props.map(p => p.area);
+  const ages   = props.map(p => p.age);
+
+  const minT = Math.min(...totals), maxT = Math.max(...totals);
+  const minW = Math.min(...walks),  maxW = Math.max(...walks);
+  const minA = Math.min(...areas),  maxA = Math.max(...areas);
+  const minAg = Math.min(...ages),  maxAg = Math.max(...ages);
+
+  const norm = (v, lo, hi) => hi === lo ? 100 : Math.round((hi - v) / (hi - lo) * 100);
+  const normUp = (v, lo, hi) => hi === lo ? 100 : Math.round((v - lo) / (hi - lo) * 100);
+
+  return props.map(p => {
+    const sRent      = norm(p.total, minT, maxT);
+    const sWalk      = norm(p.walk,  minW, maxW);
+    const sArea      = normUp(p.area, minA, maxA);
+    const sAge       = norm(p.age,   minAg, maxAg);
+    const sStructure = structureScore(p.structure);
+    const composite  = Math.round(sRent * 0.30 + sWalk * 0.30 + sArea * 0.15 + sAge * 0.15 + sStructure * 0.10);
+    return { ...p, sRent, sWalk, sArea, sAge, sStructure, composite };
+  });
+}
+
+let scored = computeScores(properties);
+
+// おすすめ順でランク付け（ハザードスコア<7は強制最下位）
+function rankByScore(arr) {
+  const sorted = [...arr].sort((a, b) => {
+    const aFail = a.hazardScore < 7;
+    const bFail = b.hazardScore < 7;
+    if (aFail && !bFail) return 1;
+    if (!aFail && bFail) return -1;
+    return b.composite - a.composite;
+  });
+  return arr.map(p => ({ ...p, rank: sorted.findIndex(s => s.id === p.id) + 1 }));
+}
+
+scored = rankByScore(scored);
+
+// ── ユーティリティ ──
+const fmt = n => '¥' + n.toLocaleString();
+
+function walkClass(w) {
+  if (w <= 3) return 'walk-great';
+  if (w <= 8) return 'walk-good';
+  return 'walk-far';
+}
+function walkLabel(w) {
+  if (w <= 3) return `徒歩${w}分 ✓`;
+  if (w <= 8) return `徒歩${w}分`;
+  return `徒歩${w}分`;
+}
+function ageClass(a) {
+  if (a <= 10) return 'age-new';
+  if (a <= 20) return 'age-mid';
+  return 'age-old';
+}
+function stars(score) {
+  const filled = Math.round(score / 20);
+  return '★'.repeat(filled) + '☆'.repeat(5 - filled);
+}
+function rankClass(r) {
+  if (r === 1) return 'rank-1';
+  if (r === 2) return 'rank-2';
+  if (r === 3) return 'rank-3';
+  return 'rank-other';
+}
+function cellRentClass(v) {
+  if (v <= 150000) return 'c-green';
+  if (v <= 165000) return 'c-orange';
+  return 'c-red';
+}
+function cellWalkClass(w) {
+  if (w <= 3) return 'c-green';
+  if (w <= 8) return 'c-orange';
+  return 'c-red';
+}
+function cellAgeClass(a) {
+  if (a <= 10) return 'c-green';
+  if (a <= 20) return 'c-orange';
+  return 'c-red';
+}
+function cellInitialClass(v) {
+  if (v <= 300000) return 'c-green';
+  if (v <= 400000) return 'c-orange';
+  return 'c-red';
+}
+function hazardClass(score) {
+  if (score >= 9) return 'hazard-high';
+  if (score >= 7) return 'hazard-mid';
+  return 'hazard-low';
+}
+function cellHazardClass(score) {
+  if (score >= 9) return 'c-green';
+  if (score >= 7) return 'c-orange';
+  return 'c-red';
+}
+
+// ── サマリーバー ──
+function renderSummary(arr) {
+  const cheapest  = arr.reduce((a, b) => a.total  < b.total  ? a : b);
+  const nearest   = arr.reduce((a, b) => a.walk   < b.walk   ? a : b);
+  const widest    = arr.reduce((a, b) => a.area   > b.area   ? a : b);
+  const cheapInit = arr.reduce((a, b) => a.initial < b.initial ? a : b);
+
+  const items = [
+    { label:'最安 月額合計',   value: fmt(cheapest.total),        name: cheapest.name },
+    { label:'最短 駅徒歩',     value: `徒歩${nearest.walk}分`,     name: nearest.name  },
+    { label:'最広 専有面積',   value: `${widest.area}㎡`,          name: widest.name   },
+    { label:'初期費用 最安',   value: fmt(cheapInit.initial),      name: cheapInit.name + (cheapInit.key === 0 ? ' (礼金なし!)' : '') },
+  ];
+
+  document.getElementById('summary-bar').innerHTML = items.map(i => `
+    <div class="summary-card">
+      <div class="s-label">${i.label}</div>
+      <div class="s-value">${i.value}</div>
+      <div class="s-name">${i.name}</div>
+    </div>
+  `).join('');
+}
+
+// ── カード描画 ──
+function renderCards(arr) {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = arr.map(p => {
+    const nokey = p.key === 0 ? '<span class="nokey-badge">🎉 礼金なし</span>' : '';
+    const typeClass = p.type === 'マンション' ? 'type-mansion' : 'type-apart';
+    const rankC = rankClass(p.rank);
+
+    return `
+    <div class="prop-card">
+      <div class="rank-badge ${rankC}">${p.rank}</div>
+      <div>
+        <div>
+          <span class="type-badge ${typeClass}">${p.type}</span>${nokey}
+        </div>
+        <div class="card-name">${p.name}</div>
+        <div class="card-addr">📍 ${p.addr} ／ ${p.floor}</div>
+      </div>
+
+      <div class="monthly-total">
+        <div class="monthly-yen">${fmt(p.total)}</div>
+        <div class="monthly-unit">/月</div>
+        <div class="monthly-break">家賃${fmt(p.rent)}＋管理費${fmt(p.mgmt)}</div>
+      </div>
+
+      <div class="station-row">
+        <div class="station-icon">🚉</div>
+        <div class="station-info">
+          <div class="station-name">${p.station}</div>
+          <div class="station-line">${p.line}</div>
+        </div>
+        <div class="walk-badge ${walkClass(p.walk)}">${walkLabel(p.walk)}</div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="i-label">専有面積</div>
+          <div class="i-value">${p.area} ㎡</div>
+        </div>
+        <div class="info-item">
+          <div class="i-label">築年数</div>
+          <div class="i-value ${ageClass(p.age)}">${p.yr}年築（${p.age}年）</div>
+        </div>
+        <div class="info-item" style="grid-column: span 2;">
+          <div class="i-label">構造</div>
+          <div class="i-value" style="font-size:13px">${p.structure}</div>
+        </div>
+        <div class="info-item" style="grid-column: span 2;">
+          <div class="i-label">ハザードスコア（api.utsuken.net）</div>
+          <div class="i-value">
+            <span class="hazard-badge ${hazardClass(p.hazardScore)}">
+              ${p.hazardScore}/10
+            </span>
+            <span style="font-size:11px;color:var(--muted);margin-left:6px">${p.hazardScore >= 9 ? '安全' : p.hazardScore >= 7 ? '要注意' : 'リスクあり'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-row">
+          <span class="score-lbl">家賃</span>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${p.sRent}%"></div></div>
+          <span class="score-num">${p.sRent}</span>
+        </div>
+        <div class="score-row">
+          <span class="score-lbl">駅近さ</span>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${p.sWalk}%"></div></div>
+          <span class="score-num">${p.sWalk}</span>
+        </div>
+        <div class="score-row">
+          <span class="score-lbl">広さ</span>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${p.sArea}%"></div></div>
+          <span class="score-num">${p.sArea}</span>
+        </div>
+        <div class="score-row">
+          <span class="score-lbl">築浅さ</span>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${p.sAge}%"></div></div>
+          <span class="score-num">${p.sAge}</span>
+        </div>
+        <div class="score-row">
+          <span class="score-lbl">構造</span>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${p.sStructure}%"></div></div>
+          <span class="score-num">${p.sStructure}</span>
+        </div>
+      </div>
+      ${p.hazardScore < 7 ? '<div style="background:var(--red-light);color:var(--red);border:1px solid var(--red);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;margin-top:8px;">⚠️ ハザードリスクあり（スコア' + p.hazardScore + '/10）：評価対象外・最下位</div>' : ''}
+
+      <div class="composite-score">
+        <span class="cs-label">おすすめ度</span>
+        <span class="cs-stars">${stars(p.composite)}</span>
+        <span class="cs-num">${p.composite}/100</span>
+      </div>
+
+      <div class="initial-cost">
+        💰 初期費用目安：<span class="ic-amount">${fmt(p.initial)}</span>
+        （敷金${fmt(p.deposit)}＋礼金${p.key === 0 ? '<strong>なし</strong>' : fmt(p.key)}）
+      </div>
+
+      <a class="suumo-btn" href="${p.url}" target="_blank" rel="noopener">SUUMOで詳細を見る →</a>
+    </div>`;
+  }).join('');
+}
+
+// ── テーブル描画 ──
+function renderTable(arr) {
+  const sorted = [...arr].sort((a, b) => a.rank - b.rank);
+  document.getElementById('table-body').innerHTML = sorted.map(p => `
+    <tr>
+      <td style="font-weight:800;text-align:center">${p.rank}</td>
+      <td class="td-name">${p.name}${p.key === 0 ? ' <span style="color:#9d174d;font-size:10px">礼金なし</span>' : ''}</td>
+      <td class="td-price ${cellRentClass(p.total)}">${fmt(p.total)}</td>
+      <td>${fmt(p.rent)}</td>
+      <td>${fmt(p.mgmt)}</td>
+      <td>${fmt(p.deposit)}</td>
+      <td>${p.key === 0 ? '<strong>なし</strong>' : fmt(p.key)}</td>
+      <td class="${cellInitialClass(p.initial)}">${fmt(p.initial)}</td>
+      <td>${p.area}</td>
+      <td>${p.station}</td>
+      <td style="font-size:11px">${p.line}</td>
+      <td class="${cellWalkClass(p.walk)}">${p.walk}分</td>
+      <td>${p.yr}年</td>
+      <td class="${cellAgeClass(p.age)}">${p.age}年</td>
+      <td>${p.type}</td>
+      <td>${p.structure}</td>
+      <td class="${cellHazardClass(p.hazardScore)}" style="text-align:center;font-size:13px">${p.hazardScore}/10</td>
+      <td class="td-link"><a href="${p.url}" target="_blank" rel="noopener">🔗 見る</a></td>
+    </tr>
+  `).join('');
+}
+
+// ── ソート ──
+let currentSort = 'score';
+function sortBy(key) {
+  currentSort = key;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const sortMap = {
+    score:   (a, b) => a.rank - b.rank,
+    rent:    (a, b) => a.total - b.total,
+    walk:    (a, b) => a.walk - b.walk,
+    area:    (a, b) => b.area - a.area,
+    age:     (a, b) => a.age - b.age,
+    initial: (a, b) => a.initial - b.initial,
+  };
+  const sorted = [...scored].sort(sortMap[key]);
+  renderCards(sorted);
+}
+
+// ── 初期描画 ──
+renderSummary(scored);
+renderCards([...scored].sort((a, b) => a.rank - b.rank));
+renderTable(scored);
+</script>
+</body>
+</html>
